@@ -13,6 +13,7 @@ import static graphql.schema.GraphQLFieldDefinition.newFieldDefinition;
 import static graphql.schema.GraphQLObjectType.newObject;
 
 import org.bson.Document;
+import org.bson.types.ObjectId;
 import com.mongodb.Block;
 import com.mongodb.client.FindIterable;
 import com.mongodb.client.MongoDatabase;
@@ -89,6 +90,33 @@ public class TodoSchema {
         }
     };
 
+    static DataFetcher toggleFetcher = new DataFetcher() {
+        @Override
+        public Object get(DataFetchingEnvironment environment) {
+            String id = (String) environment.getArguments().get("id");
+            List<Map<String, Object>> todos = new ArrayList<Map<String, Object>>();
+            FindIterable<Document> iterable = collection.find(
+                new Document("_id", new ObjectId(id))
+            );
+            iterable.forEach(new Block<Document>() {
+                @Override
+                public void apply(final Document document) {
+                    document.append("completed", !Boolean.parseBoolean(document.get("completed").toString()));
+                    collection.updateOne(
+                        new Document("_id", new ObjectId(id)),
+                        new Document("$set", document)
+                    );
+                    todos.add(new HashMap<String, Object>(){{
+                        put("id", document.get("_id"));
+                        put("title", document.get("title"));
+                        put("completed", document.get("completed"));
+                    }});
+                }
+            });
+            return todos.get(0);
+        }
+    };
+
     static GraphQLObjectType queryType = newObject()
         .name("Query")
         .field(newFieldDefinition()
@@ -112,21 +140,39 @@ public class TodoSchema {
                 .build())
             .dataFetcher(addFetcher)
             .build())
+
         .field(newFieldDefinition()
             .type(todoType)
-            .name("toggle").build())
+            .name("toggle")
+            .description("toggle the todo")
+            .argument(newArgument()
+                .name("id")
+                .description("todo id")
+                .type(new GraphQLNonNull(GraphQLString))
+                .build())
+            .dataFetcher(toggleFetcher)
+            .build())
+
         .field(newFieldDefinition()
             .type(todoType)
-            .name("toggleAll").build())
+            .name("toggleAll")
+            .build())
+
         .field(newFieldDefinition()
             .type(todoType)
-            .name("destroy").build())
+            .name("destroy")
+            .build())
+
         .field(newFieldDefinition()
             .type(todoType)
-            .name("clearCompleted").build())
+            .name("clearCompleted")
+            .build())
+
         .field(newFieldDefinition()
             .type(todoType)
-            .name("save").build())
+            .name("save")
+            .build())
+
         .build();
 
 
