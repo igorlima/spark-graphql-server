@@ -21,21 +21,26 @@ var app = app || {};
 	};
 
 	app.TodoModel.prototype.updateTodoList = function() {
-		$.getJSON('https://spark-server-with-mongo.herokuapp.com/todos')
-		.done(function(response, code) {
-			this.todos = response || [];
+		$('.todoapp').loadingOverlay();
+		$.ajax({
+			method: 'POST',
+			contentType: 'application/graphql',
+			url: 'https://spark-graphql-server.herokuapp.com/graphql',
+			data: 'query Todo { todos { id, title, completed } }'
+		}).done(function(response, code) {
+			this.todos = response['todos'] || [];
 			this.inform();
 			$('.todoapp').loadingOverlay('remove');
 		}.bind(this));
 	};
 
-	app.TodoModel.prototype.spark = function(method, path, data) {
+	app.TodoModel.prototype.graphql = function(query) {
 		$('.todoapp').loadingOverlay();
 		$.ajax({
-			method: method,
-			contentType: 'application/json',
-			url: `https://spark-server-with-mongo.herokuapp.com/todos${path}`,
-			data: JSON.stringify(data)
+			method: 'POST',
+			contentType: 'application/graphql',
+			url: 'https://spark-graphql-server.herokuapp.com/graphql',
+			data: query
 		}).done(function(response, code) {
 			this.updateTodoList()
 		}.bind(this));
@@ -51,14 +56,20 @@ var app = app || {};
 	};
 
 	app.TodoModel.prototype.addTodo = function (title) {
-		this.spark('POST', '', {
-			title: title
-		});
+		this.graphql(`
+			mutation Todo {
+				add (title: "${title}") {
+					id,
+					title,
+					completed
+				}
+			}
+		`);
 	};
 
 	app.TodoModel.prototype.toggleAll = function (checked) {
 		this.graphql(`
-			mutation {
+			mutation Todo {
 				toggleAll (checked: ${checked}) {
 					id,
 					title,
@@ -69,24 +80,44 @@ var app = app || {};
 	};
 
 	app.TodoModel.prototype.toggle = function (todoToToggle) {
-		this.spark('PUT', `/${todoToToggle._id.$oid}`, {
-			completed: !todoToToggle.completed
-		});
+		this.graphql(`
+			mutation Todo {
+				toggle (id: "${todoToToggle.id}") {
+					id,
+					title,
+					completed
+				}
+			}
+		`);
 	};
 
 	app.TodoModel.prototype.destroy = function (todo) {
-		this.spark('DELETE', `/${todo._id.$oid}`);
+		this.graphql(`
+			mutation Todo {
+				destroy (id: "${todo.id}") {
+					id,
+					title,
+					completed
+				}
+			}
+		`);
 	};
 
 	app.TodoModel.prototype.save = function (todoToSave, text) {
-		this.spark('PUT', `/${todoToSave._id.$oid}`, {
-			title: text
-		});
+		this.graphql(`
+			mutation Todo {
+				save (id: "${todoToSave.id}", title: "${text}") {
+					id,
+					title,
+					completed
+				}
+			}
+		`);
 	};
 
 	app.TodoModel.prototype.clearCompleted = function () {
 		this.graphql(`
-			mutation {
+			mutation Todo {
 				clearCompleted {
 					id,
 					title,
