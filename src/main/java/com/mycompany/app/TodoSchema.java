@@ -3,10 +3,12 @@ package com.mycompany.app;
 import graphql.schema.GraphQLObjectType;
 import graphql.schema.GraphQLSchema;
 import graphql.schema.GraphQLList;
+import graphql.schema.GraphQLNonNull;
 import graphql.schema.DataFetcher;
 import graphql.schema.DataFetchingEnvironment;
 import static graphql.Scalars.GraphQLString;
 import static graphql.Scalars.GraphQLBoolean;
+import static graphql.schema.GraphQLArgument.newArgument;
 import static graphql.schema.GraphQLFieldDefinition.newFieldDefinition;
 import static graphql.schema.GraphQLObjectType.newObject;
 
@@ -69,8 +71,26 @@ public class TodoSchema {
         }
     };
 
-    public static GraphQLObjectType queryType = newObject()
-        .name("queryType")
+    static DataFetcher addFetcher = new DataFetcher() {
+        @Override
+        public Object get(DataFetchingEnvironment environment) {
+            Object title = environment.getArguments().get("title");
+            Document newTodo = new Document()
+                .append("title", title)
+                .append("completed", false);
+            collection.insertOne(newTodo);
+
+            Map<String, Object> todo = new HashMap<String, Object>(){{
+                put("id", newTodo.get("_id"));
+                put("title", newTodo.get("title"));
+                put("completed", newTodo.get("completed"));
+            }};
+            return todo;
+        }
+    };
+
+    static GraphQLObjectType queryType = newObject()
+        .name("Query")
         .field(newFieldDefinition()
             .type(new GraphQLList(todoType))
             .name("todos")
@@ -79,7 +99,39 @@ public class TodoSchema {
             .build())
         .build();
 
+    static GraphQLObjectType mutationType = newObject()
+        .name("Mutation")
+        .field(newFieldDefinition()
+            .type(todoType)
+            .name("add")
+            .description("add a todo")
+            .argument(newArgument()
+                .name("title")
+                .description("todo title")
+                .type(new GraphQLNonNull(GraphQLString))
+                .build())
+            .dataFetcher(addFetcher)
+            .build())
+        .field(newFieldDefinition()
+            .type(todoType)
+            .name("toggle").build())
+        .field(newFieldDefinition()
+            .type(todoType)
+            .name("toggleAll").build())
+        .field(newFieldDefinition()
+            .type(todoType)
+            .name("destroy").build())
+        .field(newFieldDefinition()
+            .type(todoType)
+            .name("clearCompleted").build())
+        .field(newFieldDefinition()
+            .type(todoType)
+            .name("save").build())
+        .build();
+
+
     public static GraphQLSchema schema = GraphQLSchema.newSchema()
         .query(queryType)
+        .mutation(mutationType)
         .build();
 }

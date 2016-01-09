@@ -32,10 +32,10 @@ public class Main {
             response.header("Access-Control-Allow-Origin", "*");
         });
 
-        get("/graphql", (request, response) -> {
+        post("/graphql", (request, response) -> {
             GraphQL graphql = new GraphQL(TodoSchema.schema);
             response.type("application/json");
-            return JSON.serialize( graphql.execute("{todos {id, title, completed}}").getData() );
+            return JSON.serialize( graphql.execute(request.body()).getData() );
         });
 
     }
