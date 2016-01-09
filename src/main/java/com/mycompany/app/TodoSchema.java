@@ -144,6 +144,29 @@ public class TodoSchema {
         }
     };
 
+    static DataFetcher destroyFetcher = new DataFetcher() {
+        @Override
+        public Object get(DataFetchingEnvironment environment) {
+            String id = (String) environment.getArguments().get("id");
+            List<Map<String, Object>> todos = new ArrayList<Map<String, Object>>();
+            FindIterable<Document> iterable = collection.find(
+                new Document("_id", new ObjectId(id))
+            );
+            iterable.forEach(new Block<Document>() {
+                @Override
+                public void apply(final Document document) {
+                    todos.add(new HashMap<String, Object>(){{
+                        put("id", document.get("_id"));
+                        put("title", document.get("title"));
+                        put("completed", document.get("completed"));
+                    }});
+                }
+            });
+            collection.deleteOne(new Document("_id", new ObjectId(id)));
+            return todos.get(0);
+        }
+    };
+
     static GraphQLObjectType queryType = newObject()
         .name("Todo")
         .field(newFieldDefinition()
@@ -194,6 +217,12 @@ public class TodoSchema {
         .field(newFieldDefinition()
             .type(todoType)
             .name("destroy")
+            .argument(newArgument()
+                .name("id")
+                .description("destroy the todo")
+                .type(new GraphQLNonNull(GraphQLString))
+                .build())
+            .dataFetcher(destroyFetcher)
             .build())
 
         .field(newFieldDefinition()
