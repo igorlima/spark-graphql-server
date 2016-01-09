@@ -145,7 +145,7 @@ public class TodoSchema {
     };
 
     static GraphQLObjectType queryType = newObject()
-        .name("Query")
+        .name("Todo")
         .field(newFieldDefinition()
             .type(new GraphQLList(todoType))
             .name("todos")
@@ -155,7 +155,7 @@ public class TodoSchema {
         .build();
 
     static GraphQLObjectType mutationType = newObject()
-        .name("Mutation")
+        .name("Todo")
         .field(newFieldDefinition()
             .type(todoType)
             .name("add")
