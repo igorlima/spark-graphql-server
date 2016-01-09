@@ -167,6 +167,30 @@ public class TodoSchema {
         }
     };
 
+    static DataFetcher clearCompletedFetcher = new DataFetcher() {
+        @Override
+        public Object get(DataFetchingEnvironment environment) {
+            List<Map<String, Object>> todos = new ArrayList<Map<String, Object>>();
+            List<ObjectId> toClear = new ArrayList<ObjectId>();
+            FindIterable<Document> iterable = collection.find(
+                new Document("completed", true)
+            );
+            iterable.forEach(new Block<Document>() {
+                @Override
+                public void apply(final Document document) {
+                    toClear.add((ObjectId) document.get("_id"));
+                    todos.add(new HashMap<String, Object>(){{
+                        put("id", document.get("_id"));
+                        put("title", document.get("title"));
+                        put("completed", document.get("completed"));
+                    }});
+                }
+            });
+            collection.deleteMany(new Document("_id", new Document("$in", toClear)));
+            return todos;
+        }
+    };
+
     static GraphQLObjectType queryType = newObject()
         .name("Todo")
         .field(newFieldDefinition()
@@ -226,8 +250,9 @@ public class TodoSchema {
             .build())
 
         .field(newFieldDefinition()
-            .type(todoType)
+            .type(new GraphQLList(todoType))
             .name("clearCompleted")
+            .dataFetcher(clearCompletedFetcher)
             .build())
 
         .field(newFieldDefinition()
