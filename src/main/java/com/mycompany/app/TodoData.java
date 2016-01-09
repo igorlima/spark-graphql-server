@@ -25,6 +25,14 @@ class TodoData {
     static MongoDatabase db = mongoClient.getDatabase("spark-server-with-mongo");
     static MongoCollection<Document> collection = db.getCollection("todos");
 
+    static Map<String, Object> converter(Document document) {
+        return new HashMap<String, Object>(){{
+            put("id", document.get("_id"));
+            put("title", document.get("title"));
+            put("completed", document.get("completed"));
+        }};
+    };
+
     static DataFetcher todoFetcher = new DataFetcher() {
         @Override
         public Object get(DataFetchingEnvironment environment) {
@@ -33,11 +41,7 @@ class TodoData {
             iterable.forEach(new Block<Document>() {
                 @Override
                 public void apply(final Document document) {
-                    todos.add(new HashMap<String, Object>(){{
-                        put("id", document.get("_id"));
-                        put("title", document.get("title"));
-                        put("completed", document.get("completed"));
-                    }});
+                    todos.add(converter(document));
                 }
             });
             return todos;
@@ -52,13 +56,7 @@ class TodoData {
                 .append("title", title)
                 .append("completed", false);
             collection.insertOne(newTodo);
-
-            Map<String, Object> todo = new HashMap<String, Object>(){{
-                put("id", newTodo.get("_id"));
-                put("title", newTodo.get("title"));
-                put("completed", newTodo.get("completed"));
-            }};
-            return todo;
+            return converter(newTodo);
         }
     };
 
@@ -78,11 +76,7 @@ class TodoData {
                         new Document("_id", new ObjectId(id)),
                         new Document("$set", document)
                     );
-                    todos.add(new HashMap<String, Object>(){{
-                        put("id", document.get("_id"));
-                        put("title", document.get("title"));
-                        put("completed", document.get("completed"));
-                    }});
+                    todos.add(converter(document));
                 }
             });
             return todos.get(0);
@@ -104,11 +98,7 @@ class TodoData {
             iterable.forEach(new Block<Document>() {
                 @Override
                 public void apply(final Document document) {
-                    todos.add(new HashMap<String, Object>(){{
-                        put("id", document.get("_id"));
-                        put("title", document.get("title"));
-                        put("completed", document.get("completed"));
-                    }});
+                    todos.add(converter(document));
                 }
             });
             return todos;
@@ -126,11 +116,7 @@ class TodoData {
             iterable.forEach(new Block<Document>() {
                 @Override
                 public void apply(final Document document) {
-                    todos.add(new HashMap<String, Object>(){{
-                        put("id", document.get("_id"));
-                        put("title", document.get("title"));
-                        put("completed", document.get("completed"));
-                    }});
+                    todos.add(converter(document));
                 }
             });
             collection.deleteOne(new Document("_id", new ObjectId(id)));
@@ -150,11 +136,7 @@ class TodoData {
                 @Override
                 public void apply(final Document document) {
                     toClear.add((ObjectId) document.get("_id"));
-                    todos.add(new HashMap<String, Object>(){{
-                        put("id", document.get("_id"));
-                        put("title", document.get("title"));
-                        put("completed", document.get("completed"));
-                    }});
+                    todos.add(converter(document));
                 }
             });
             collection.deleteMany(new Document("_id", new Document("$in", toClear)));
@@ -179,11 +161,7 @@ class TodoData {
                         new Document("_id", new ObjectId(id)),
                         new Document("$set", document)
                     );
-                    todos.add(new HashMap<String, Object>(){{
-                        put("id", document.get("_id"));
-                        put("title", document.get("title"));
-                        put("completed", document.get("completed"));
-                    }});
+                    todos.add(converter(document));
                 }
             });
             return todos.get(0);
