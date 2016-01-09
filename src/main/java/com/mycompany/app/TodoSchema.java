@@ -191,6 +191,34 @@ public class TodoSchema {
         }
     };
 
+    static DataFetcher saveFetcher = new DataFetcher() {
+        @Override
+        public Object get(DataFetchingEnvironment environment) {
+            String id = (String) environment.getArguments().get("id");
+            String title = (String) environment.getArguments().get("title");
+            List<Map<String, Object>> todos = new ArrayList<Map<String, Object>>();
+            FindIterable<Document> iterable = collection.find(
+                new Document("_id", new ObjectId(id))
+            );
+            iterable.forEach(new Block<Document>() {
+                @Override
+                public void apply(final Document document) {
+                    document.append("title", title);
+                    collection.updateOne(
+                        new Document("_id", new ObjectId(id)),
+                        new Document("$set", document)
+                    );
+                    todos.add(new HashMap<String, Object>(){{
+                        put("id", document.get("_id"));
+                        put("title", document.get("title"));
+                        put("completed", document.get("completed"));
+                    }});
+                }
+            });
+            return todos.get(0);
+        }
+    };
+
     static GraphQLObjectType queryType = newObject()
         .name("Todo")
         .field(newFieldDefinition()
@@ -230,9 +258,10 @@ public class TodoSchema {
         .field(newFieldDefinition()
             .type(new GraphQLList(todoType))
             .name("toggleAll")
+            .description("toggle all todos")
             .argument(newArgument()
                 .name("checked")
-                .description("toggle all todos")
+                .description("checked flag")
                 .type(new GraphQLNonNull(GraphQLBoolean))
                 .build())
             .dataFetcher(toggleAllFetcher)
@@ -241,9 +270,10 @@ public class TodoSchema {
         .field(newFieldDefinition()
             .type(todoType)
             .name("destroy")
+            .description("destroy the todo")
             .argument(newArgument()
                 .name("id")
-                .description("destroy the todo")
+                .description("todo id")
                 .type(new GraphQLNonNull(GraphQLString))
                 .build())
             .dataFetcher(destroyFetcher)
@@ -252,12 +282,25 @@ public class TodoSchema {
         .field(newFieldDefinition()
             .type(new GraphQLList(todoType))
             .name("clearCompleted")
+            .description("clear all completed todos")
             .dataFetcher(clearCompletedFetcher)
             .build())
 
         .field(newFieldDefinition()
             .type(todoType)
             .name("save")
+            .description("edit a todo")
+            .argument(newArgument()
+                .name("id")
+                .description("todo id")
+                .type(new GraphQLNonNull(GraphQLString))
+                .build())
+            .argument(newArgument()
+                .name("title")
+                .description("todo title")
+                .type(new GraphQLNonNull(GraphQLString))
+                .build())
+            .dataFetcher(saveFetcher)
             .build())
 
         .build();
