@@ -23,6 +23,7 @@ import com.mongodb.MongoClient;
 import com.mongodb.MongoClientURI;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.lang.String;
 import java.util.Map;
@@ -117,6 +118,32 @@ public class TodoSchema {
         }
     };
 
+    static DataFetcher toggleAllFetcher = new DataFetcher() {
+        @Override
+        public Object get(DataFetchingEnvironment environment) {
+            Boolean checked = (Boolean) environment.getArguments().get("checked");
+            Document update = new Document().append("completed", checked);
+            collection.updateMany(
+                new Document("completed", new Document("$in", Arrays.asList(true, false))),
+                new Document("$set", update)
+            );
+
+            List<Map<String, Object>> todos = new ArrayList<Map<String, Object>>();
+            FindIterable<Document> iterable = collection.find();
+            iterable.forEach(new Block<Document>() {
+                @Override
+                public void apply(final Document document) {
+                    todos.add(new HashMap<String, Object>(){{
+                        put("id", document.get("_id"));
+                        put("title", document.get("title"));
+                        put("completed", document.get("completed"));
+                    }});
+                }
+            });
+            return todos;
+        }
+    };
+
     static GraphQLObjectType queryType = newObject()
         .name("Query")
         .field(newFieldDefinition()
@@ -154,8 +181,14 @@ public class TodoSchema {
             .build())
 
         .field(newFieldDefinition()
-            .type(todoType)
+            .type(new GraphQLList(todoType))
             .name("toggleAll")
+            .argument(newArgument()
+                .name("checked")
+                .description("toggle all todos")
+                .type(new GraphQLNonNull(GraphQLBoolean))
+                .build())
+            .dataFetcher(toggleAllFetcher)
             .build())
 
         .field(newFieldDefinition()
