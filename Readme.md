@@ -1,5 +1,5 @@
 
-## Compile
+## Compile and download all dependencies
 
 ```sh
 mvn clean package
