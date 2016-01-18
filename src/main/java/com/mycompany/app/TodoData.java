@@ -20,9 +20,9 @@ import java.util.Map;
 import java.util.HashMap;
 
 class TodoData {
-    static MongoClientURI uri = new MongoClientURI("mongodb://example:example@candidate.54.mongolayer.com:10775,candidate.57.mongolayer.com:10128/spark-server-with-mongo?replicaSet=set-5647f7c9cd9e2855e00007fb");
+    static MongoClientURI uri = new MongoClientURI("mongodb://example:example@ds047355.mongolab.com:47355/todo-list-graphql");
     static MongoClient mongoClient = new MongoClient(uri);
-    static MongoDatabase db = mongoClient.getDatabase("spark-server-with-mongo");
+    static MongoDatabase db = mongoClient.getDatabase("todo-list-graphql");
     static MongoCollection<Document> collection = db.getCollection("todos");
 
     static Map<String, Object> converter(Document document) {
